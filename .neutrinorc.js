@@ -5,7 +5,11 @@ module.exports = {
       {
         eslint: {
           rules: {
-            'arrow-parens': ['error', 'as-needed']
+            'arrow-parens': ['error', 'as-needed'],
+            'no-multi-assign': 'off',
+            'function-paren-newline': 'off',
+            'comma-dangle': 'off',
+            'no-console': 'off'
           }
         }
       }

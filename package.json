@@ -1,20 +1,24 @@
 {
-  "name": "web-starter-kit",
-  "version": "0.1.0",
+  "name": "web-starter-cli",
+  "version": "0.2.0",
   "main": "index.js",
+  "private": "true",
+  "repository": "https://github.com/drich14/web-starter-cli",
   "license": "MIT",
+  "bin": {
+    "web-starter": "bin/index.js"
+  },
   "scripts": {
     "build": "neutrino build",
     "lint": "neutrino lint",
     "test": "neutrino test",
-    "start": "yarn build && nodemon build/index.js"
+    "start": "bin/index.js"
   },
   "devDependencies": {
     "@neutrinojs/airbnb-base": "^8.1.1",
     "@neutrinojs/jest": "^8.1.1",
     "@neutrinojs/library": "^8.1.1",
-    "neutrino": "^8.1.1",
-    "nodemon": "^1.15.1"
+    "neutrino": "^8.1.1"
   },
   "dependencies": {
     "babel-plugin-dynamic-import-node": "^1.2.0",

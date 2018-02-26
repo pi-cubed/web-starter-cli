@@ -1,7 +1,7 @@
 const inquirer = require('inquirer');
 const download = require('download-git-repo');
 
-const main = () => {
+exports = module.exports = () => {
   inquirer
     .prompt([
       {
@@ -16,5 +16,3 @@ const main = () => {
       );
     });
 };
-
-exports = module.exports = main();
