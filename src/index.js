@@ -1,9 +1,16 @@
 require('dotenv').config();
+const yargs = require('yargs');
 const inquirer = require('inquirer');
 const download = require('download-git-repo');
 const replaceInFile = require('replace-in-file');
 const fs = require('fs');
 const heroku = require('./heroku');
+
+const { argv: { disableIntegrations } } = yargs
+  .alias('x', 'disableIntegrations')
+  .boolean('x')
+  .describe('x', 'Do not setup integrations')
+  .help();
 
 const NAME = 'web-starter';
 const DESCRIPTION = 'Starter kit for making web apps using JS';
@@ -21,7 +28,8 @@ const prompts = [
     message: "What's the name of your app?",
     validate: name => {
       if (!name) return 'Please provide a name for your app.';
-      return heroku(name).then(() => true);
+      if (!disableIntegrations) return heroku(name).then(() => true);
+      return true;
     }
   },
   {
@@ -59,6 +67,7 @@ const customize = ({ name, description, author }) => {
 
 exports = module.exports = () => {
   inquirer.prompt(prompts).then(data => {
+    // download web-starter repo
     download('drich14/web-starter', data.name, err => {
       if (err) {
         // TODO undo integrations
