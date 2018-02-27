@@ -9,7 +9,9 @@ module.exports = {
             'no-multi-assign': 'off',
             'function-paren-newline': 'off',
             'comma-dangle': 'off',
-            'no-console': 'off'
+            'no-console': 'off',
+            'arrow-body-style': 'off',
+            'no-throw-literal': 'off'
           }
         }
       }
