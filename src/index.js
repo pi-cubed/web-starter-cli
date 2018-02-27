@@ -47,13 +47,18 @@ const prompts = [
 const customize = ({ name, description, author }) => {
   replace([`${name}/**/*`, `${name}/.env*`], NAME, name).then(() => {
     // replaceInFile does not work in parallel
+
+    // description
     if (description) {
       replace(`${name}/README.md`, DESCRIPTION, description);
     }
+
+    // author
     if (author) {
       replace(`${name}/LICENSE`, AUTHOR, author);
     }
 
+    // package.json
     const packageFile = `${name}/package.json`;
     const config = JSON.parse(fs.readFileSync(packageFile));
 
@@ -62,6 +67,9 @@ const customize = ({ name, description, author }) => {
     config.author = author || '';
 
     fs.writeFileSync(packageFile, JSON.stringify(config, null, '\t'));
+
+    // .env
+    fs.createReadStream(`${name}/.env.dev`).pipe(fs.createWriteStream(`${name}/.env`));
   });
 };
 
