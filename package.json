@@ -1,7 +1,6 @@
 {
   "name": "@drich14/web-starter-cli",
-  "version": "0.4.1",
-  "main": "index.js",
+  "version": "0.4.2",
   "repository": "https://github.com/drich14/web-starter-cli",
   "license": "MIT",
   "main": "build/index.js",
