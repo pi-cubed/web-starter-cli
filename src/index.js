@@ -4,18 +4,20 @@ const Promise = require('bluebird');
 const download = require('download-git-repo');
 const replaceInFile = require('replace-in-file');
 const fs = require('fs');
-const heroku = require('./heroku');
 const { merge } = require('./integration');
+const heroku = require('./heroku');
+const github = require('./github');
+const zenhub = require('./zenhub');
 
-const INTEGRATIONS = [heroku];
+const INTEGRATIONS = [heroku, github, zenhub];
 const NAME = 'web-starter';
 const DESCRIPTION = 'Starter kit for making web apps using JS';
 const AUTHOR = 'Dylan Richardson';
 
 const replace = (files, from, to) =>
-  replaceInFile({ files, from: [from], to: [to] })
-    .then(changes => console.log('Modified files:', changes.join(', ')))
-    .catch(error => console.error('Error occurred:', error));
+  replaceInFile({ files, from: [from], to: [to] }).catch(error =>
+    console.error('Error occurred:', error)
+  );
 
 const prompts = [
   {

@@ -1,7 +1,6 @@
 const { integration } = require('./integration');
-// const Heroku = require('heroku-client');
 
-const NAME = 'Heroku';
+const NAME = 'ZenHub';
 
 const create = (name, creds) => {
   // TODO add credentials as argument
