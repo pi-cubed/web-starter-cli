@@ -4,22 +4,30 @@ const Promise = require('bluebird');
 const download = require('download-git-repo');
 const replaceInFile = require('replace-in-file');
 const fs = require('fs');
-const { merge } = require('./integration');
+const { merge, mergeList } = require('./integration');
 const heroku = require('./heroku');
 const github = require('./github');
 const zenhub = require('./zenhub');
+// const repo = require('./repo');
 
-const INTEGRATIONS = [heroku, github, zenhub];
+const INTEGRATIONS = mergeList([heroku, github, zenhub]);
+const INT_NAMES = Object.keys(INTEGRATIONS);
+const INT_OPTIONS = [
+  {
+    type: 'checkbox',
+    name: 'names',
+    message: 'Select integrations to setup',
+    choices: INT_NAMES,
+    default: INT_NAMES
+  }
+];
+
 const NAME = 'web-starter';
 const DESCRIPTION = 'Starter kit for making web apps using JS';
 const AUTHOR = 'Dylan Richardson';
+const REPO = 'drich14/web-starter';
 
-const replace = (files, from, to) =>
-  replaceInFile({ files, from: [from], to: [to] }).catch(error =>
-    console.error('Error occurred:', error)
-  );
-
-const prompts = [
+const CUSTOMIZE = [
   {
     type: 'input',
     name: 'name',
@@ -42,83 +50,86 @@ const prompts = [
   }
 ];
 
-const customize = ({ name, description, author }) => {
-  replace([`${name}/**/*`, `${name}/.env*`], NAME, name).then(() => {
-    // replaceInFile does not work in parallel
-    // description
-    if (description) {
-      replace(`${name}/README.md`, DESCRIPTION, description);
-    }
-    // author
-    if (author) {
-      replace(`${name}/LICENSE`, AUTHOR, author);
-    }
-    // package.json
-    const packageFile = `${name}/package.json`;
-    const config = JSON.parse(fs.readFileSync(packageFile));
-    config.version = '0.1.0';
-    config.description = description || '';
-    config.author = author || '';
-    fs.writeFileSync(packageFile, JSON.stringify(config, null, '\t'));
-    // .env
-    fs
-      .createReadStream(`${name}/.env.dev`)
-      .pipe(fs.createWriteStream(`${name}/.env`));
-  });
+const replaceGeneral = (_, opts) => {
+  console.log(opts);
+  return replaceInFile(opts);
 };
 
-const integrationNames = INTEGRATIONS.map(i => i.name);
-
-const loginIntegration = integration => {
-  const int = INTEGRATIONS.find(i => i.name === integration);
-  if (int) return int.login();
-  throw 'Integration not implemented yet.';
+const replacePackage = ({ name, description, author }) => () => {
+  const packageFile = `${name}/package.json`;
+  const config = JSON.parse(fs.readFileSync(packageFile));
+  config.version = '0.1.0';
+  config.description = description || '';
+  config.author = author || '';
+  fs.writeFileSync(packageFile, JSON.stringify(config, null, '\t'));
 };
 
-const removeIntegration = integration => {
-  const int = INTEGRATIONS.find(i => i.name === integration);
-  if (int) return int.remove();
-  throw 'Integration not implemented yet.';
+const replaceEnv = ({ name }) => () =>
+  fs
+    .createReadStream(`${name}/.env.dev`)
+    .pipe(fs.createWriteStream(`${name}/.env`));
+
+const replaceOpts = ({ name, description, author }) => [
+  { files: [`${name}/**/*`, `${name}/.env*`], from: [NAME], to: [name] },
+  {
+    files: description ? `${name}/README.md` : '',
+    from: [DESCRIPTION],
+    to: [description]
+  },
+  { files: author ? `${name}/LICENSE` : '', from: [AUTHOR], to: [author] }
+];
+
+const customizeStarter = data =>
+  Promise.reduce(replaceOpts(data), replaceGeneral, [])
+    .then(replacePackage(data))
+    .then(replaceEnv(data));
+
+const toIntegrations = ({ names }) =>
+  names.map(name => ({ [name]: INTEGRATIONS[name] }));
+
+const promptIntegrations = () =>
+  inquirer
+    .prompt(INT_OPTIONS)
+    .then(toIntegrations)
+    .then(mergeList);
+
+const promptAuthentication = integrations =>
+  Promise.mapSeries(Object.values(integrations), i => i.auth())
+    .then(mergeList)
+    .then(merge(integrations));
+
+const loginIntegrations = integrations =>
+  Promise.map(Object.values(integrations), i => i.login()).then(
+    () => integrations
+  );
+
+const promptCustomizions = integrations =>
+  inquirer.prompt(CUSTOMIZE).then(merge(integrations));
+
+const downloadStarter = data =>
+  new Promise((res, rej) =>
+    download(REPO, data.name, e => (e ? rej(e) : res(data)))
+  );
+
+const removeIntegrations = e => {
+  // undo integrations
+  Object.values(INTEGRATIONS).forEach(i => i.remove());
+  throw e;
+};
+
+const handleError = e => {
+  console.log(e);
+  process.exit(1);
 };
 
 const main = () =>
-  inquirer
-    .prompt([
-      {
-        type: 'checkbox',
-        name: 'integrations',
-        message: 'Select integrations to setup',
-        choices: integrationNames,
-        default: integrationNames
-      }
-    ])
-    .then(({ integrations }) =>
-      Promise.reduce(
-        integrations,
-        (all, v) => loginIntegration(v).then(merge(all)),
-        {}
-      )
-        .then(all => inquirer.prompt(prompts).then(merge(all)))
-        .then(
-          data =>
-            new Promise((res, rej) =>
-              download(
-                'drich14/web-starter',
-                data.name,
-                err => (err ? rej(err) : res(data))
-              )
-            )
-        )
-        .then(data => customize(data))
-        .catch(e => {
-          // undo integrations
-          integrations.forEach(removeIntegration);
-          throw e;
-        })
-    );
+  promptIntegrations()
+    .then(promptAuthentication)
+    .then(loginIntegrations)
+    .then(promptCustomizions)
+    .then(downloadStarter)
+    .then(customizeStarter)
+    .catch(removeIntegrations)
+    .catch(handleError);
 
-exports = module.exports = () =>
-  main().catch(e => {
-    console.log(e);
-    process.exit(1);
-  });
+exports = module.exports = () => main();

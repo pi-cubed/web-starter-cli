@@ -1,6 +1,6 @@
 {
   "name": "@drich14/web-starter-cli",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "repository": "https://github.com/drich14/web-starter-cli",
   "license": "MIT",
   "main": "build/index.js",
@@ -24,12 +24,14 @@
   "dependencies": {
     "babel-plugin-dynamic-import-node": "^1.2.0",
     "bluebird": "^3.5.1",
+    "deepmerge": "^2.0.1",
     "dotenv": "^5.0.1",
     "download-git-repo": "^1.0.2",
     "heroku-client": "^3.0.6",
     "in-publish": "^2.0.0",
     "inquirer": "^5.1.0",
     "lodash": "^4.17.5",
+    "nodegit": "^0.21.0",
     "replace-in-file": "^3.1.1",
     "source-map-support": "^0.5.3",
     "yargs": "^11.0.0"

@@ -11,7 +11,8 @@ module.exports = {
             'comma-dangle': 'off',
             'no-console': 'off',
             'arrow-body-style': 'off',
-            'no-throw-literal': 'off'
+            'no-throw-literal': 'off',
+            'object-curly-newline': 'off'
           }
         }
       }

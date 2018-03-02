@@ -1,9 +1,10 @@
 const inquirer = require('inquirer');
 const _ = require('lodash');
 const Promise = require('bluebird');
+const deepMerge = require('deepmerge');
 
 export const merge = o1 => o2 => {
-  return Object.assign(o1, o2);
+  return deepMerge(o1, o2);
 };
 
 const makePrompt = name => cred =>
@@ -45,20 +46,24 @@ const promptCredType = (name, creds) => {
 };
 
 // can't refactor to just Object.assign ?
-const mergeList = l => l.reduce((x, y) => Object.assign(x, y), {});
+export const mergeList = l => l.reduce(deepMerge, {});
 
-const makeCredentials = (name, creds) => vals => ({
-  [name]: mergeList(
-    Object.keys(creds).map(key => ({
-      [key]: process.env[creds[key].env] || vals[key]
-    }))
-  )
-});
+const makeCredentials = (name, credList) => vals => {
+  const creds = mergeList(credList);
+  return {
+    [name]: mergeList(
+      Object.keys(creds).map(key => ({
+        [key]: process.env[creds[key].env] || vals[key]
+      }))
+    )
+  };
+};
 
-const makeLogin = (name, creds) => async () => {
-  const credentials = makeCredentials(name, mergeList(creds));
+const makeAuthPrompt = (name, creds) => async () => {
+  const credentials = makeCredentials(name, creds);
   const promptCreds = makeCredPrompt(name, credentials);
   // check env for creds
+  // TODO fix should take first complete CredSet
   for (let i = 0; i < creds.length; i += 1) {
     const credList = creds[i];
     const keys = Object.keys(credList);
@@ -96,23 +101,26 @@ const makeUsernamePassword = name => ({
   }
 });
 
-export const integration = (
+export const integration = ({
   name,
+  login,
   create,
   remove,
   token = true,
   userPass = true,
   others = []
-) => {
+}) => {
   const creds = others.concat.apply(others, [
     token ? makeToken(name) : [],
     userPass ? makeUsernamePassword(name) : []
   ]);
-  const login = makeLogin(name, creds);
+  const auth = makeAuthPrompt(name, creds);
   return {
-    name,
-    login,
-    create,
-    remove
+    [name]: {
+      auth,
+      login,
+      create,
+      remove
+    }
   };
 };
