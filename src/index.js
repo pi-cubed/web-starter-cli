@@ -46,12 +46,15 @@ const CUSTOM_OPTIONS = [
   }
 ];
 
-const replaceGeneral = (_, opts) => replaceInFile(merge({
-  ignore: 'node_modules/*' // TODO fix
-})(opts));
+const replaceGeneral = (_, opts) =>
+  replaceInFile(
+    merge({
+      ignore: 'node_modules/*' // TODO fix
+    })(opts)
+  );
 
 const replacePackage = ({ name, description, author }) => () => {
-  const packageFile = `${name}/package.json`;
+  const packageFile = 'package.json';
   const config = JSON.parse(fs.readFileSync(packageFile));
   config.version = '0.1.0';
   config.description = description || '';
@@ -60,18 +63,16 @@ const replacePackage = ({ name, description, author }) => () => {
 };
 
 const replaceEnv = ({ name }) => () =>
-  fs
-    .createReadStream(`${name}/.env.dev`)
-    .pipe(fs.createWriteStream(`${name}/.env`));
+  fs.createReadStream('.env.dev').pipe(fs.createWriteStream('.env'));
 
 const replaceOpts = ({ name, description, author }) => [
-  { files: [`${name}/**/*`, `${name}/.env*`], from: [NAME], to: [name] },
+  { files: ['./**/*', '.env*'], from: [NAME], to: [name] },
   {
-    files: description ? `${name}/README.md` : '',
+    files: description ? 'README.md' : '',
     from: [DESCRIPTION],
     to: [description]
   },
-  { files: author ? `${name}/LICENSE` : '', from: [AUTHOR], to: [author] }
+  { files: author ? 'LICENSE' : '', from: [AUTHOR], to: [author] }
 ];
 
 const customizeStarter = opts => {
@@ -98,13 +99,14 @@ const promptAuthentication = opts =>
     .then(merge(opts.integrations))
     .then(integrations => merge(opts)({ integrations }));
 
-const mapIntegrations = (opts, f) =>
-  Promise.map(Object.values(opts.integrations), f)
-    .then(() => opts);
+const mapIntegrations = (opts, key, f) =>
+  Promise.map(Object.entries(opts.integrations), x => ({
+    [x[0]]: merge(x[1])({ [key]: f(x[1]) })
+  })).then(x => merge(opts)({ integrations: mergeList(x) }));
 
 const loginIntegrations = opts => {
   console.log('\nAuthenticating integrations...\n');
-  return mapIntegrations(opts, i => i.login(i));
+  return mapIntegrations(opts, 'client', i => i.login(opts));
 };
 
 const promptCustomizions = opts =>
@@ -113,8 +115,7 @@ const promptCustomizions = opts =>
 const downloadStarter = opts => {
   console.log('\nDownloading web-starter repo...\n');
   return new Promise((res, rej) =>
-    download(REPO, opts.name,
-      e => (e ? rej(e) : res(opts)))
+    download(REPO, opts.name, e => (e ? rej(e) : res(opts)))
   );
 };
 
@@ -133,13 +134,12 @@ const exec = (a, b) => {
 
 const installDeps = opts => {
   console.log('\nInstalling dependencies...\n');
-  process.chdir(`./${opts.name}`);
   return exec('yarn').then(() => opts);
 };
 
 const createIntegrations = opts => {
   console.log('\nIntegrations doing them thang...\n');
-  return mapIntegrations(opts, i => i.create(i, opts.name));
+  return mapIntegrations(opts, 'app', i => i.create(opts));
 };
 
 // start app in background
@@ -148,14 +148,20 @@ const startApp = opts => {
   return exec('yarn', ['dev']).then(() => opts);
 };
 
-const removeIntegrations = e => { // TODO fix, need opts
-  Object.values(INTEGRATIONS).forEach(i => i.remove(i, null));
-  throw e;
+const removeIntegrations = opts => {
+  console.log('\nRemoving integrations...\n');
+  return Object.values(opts.integrations).forEach(i => i.remove(opts));
 };
 
 const handleError = e => {
   console.log(e);
   process.exit(1);
+};
+
+const cdStarter = opts => {
+  process.chdir(`./${opts.name}`);
+  console.log(process.cwd());
+  return opts;
 };
 
 const main = () =>
@@ -164,12 +170,13 @@ const main = () =>
     .then(loginIntegrations)
     .then(promptCustomizions)
     .then(downloadStarter)
+    .then(cdStarter)
     .then(initGit)
     .then(customizeStarter)
     .then(installDeps)
     .then(createIntegrations)
     .then(startApp)
-    .catch(removeIntegrations)
+    .catch(removeIntegrations) // TODO pass opts somehow
     .catch(handleError);
 
 exports = module.exports = main;
