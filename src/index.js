@@ -8,7 +8,7 @@ const { merge, mergeList } = require('./integration');
 const heroku = require('./heroku');
 const github = require('./github');
 const zenhub = require('./zenhub');
-// const repo = require('./repo');
+const { Repository } = require('nodegit');
 
 const INTEGRATIONS = mergeList([heroku, github, zenhub]);
 const INT_NAMES = Object.keys(INTEGRATIONS);
@@ -26,13 +26,12 @@ const NAME = 'web-starter';
 const DESCRIPTION = 'Starter kit for making web apps using JS';
 const AUTHOR = 'Dylan Richardson';
 const REPO = 'drich14/web-starter';
-
-const customOptions = validate => [
+const CUSTOM_OPTIONS = [
   {
     type: 'input',
     name: 'name',
     message: "What's the name of your app?",
-    validate
+    validate: name => (!name ? 'Please provide a name for your app.' : true)
   },
   {
     type: 'input',
@@ -96,22 +95,28 @@ const loginIntegrations = integrations =>
     () => integrations
   );
 
-const validateName = integrations => name =>
-  name
-    ? Promise.map(Object.values(integrations), i => i.create(i, name)).then(
-        () => true
-      )
-    : 'Please provide a name for your app.';
+// const validateName = integrations => name =>
+//   name
+//     ? Promise.map(Object.values(integrations), i => i.create(i, name)).then(
+//         () => true
+//       )
+//     : 'Please provide a name for your app.';
 
 const promptCustomizions = integrations =>
-  inquirer
-    .prompt(customOptions(validateName(integrations)))
-    .then(merge(integrations));
+  inquirer.prompt(CUSTOM_OPTIONS).then(merge(integrations));
 
 const downloadStarter = data =>
   new Promise((res, rej) =>
     download(REPO, data.name, e => (e ? rej(e) : res(data)))
   );
+
+const initGit = integrations =>
+  Repository.init(integrations.name, 0)
+    // TODO .then(repo => repo.createCommitOnHead(['.'],
+    //            integrations.author, 'hew', 'Initial commit'))
+    .then(() => integrations);
+
+const createIntegrations = integrations => {};
 
 const removeIntegrations = e => {
   Object.values(INTEGRATIONS).forEach(i => i.remove());
@@ -129,7 +134,9 @@ const main = () =>
     .then(loginIntegrations)
     .then(promptCustomizions)
     .then(downloadStarter)
+    .then(initGit)
     .then(customizeStarter)
+    .then(createIntegrations)
     .catch(removeIntegrations)
     .catch(handleError);
 
