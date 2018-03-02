@@ -9,6 +9,7 @@ const heroku = require('./heroku');
 const github = require('./github');
 const zenhub = require('./zenhub');
 const { Repository } = require('nodegit');
+const execa = require('execa');
 
 const INTEGRATIONS = mergeList([heroku, github, zenhub]);
 const INT_NAMES = Object.keys(INTEGRATIONS);
@@ -45,7 +46,9 @@ const CUSTOM_OPTIONS = [
   }
 ];
 
-const replaceGeneral = (_, opts) => replaceInFile(opts);
+const replaceGeneral = (_, opts) => replaceInFile(merge({
+  ignore: 'node_modules/*' // TODO fix
+})(opts));
 
 const replacePackage = ({ name, description, author }) => () => {
   const packageFile = `${name}/package.json`;
@@ -71,10 +74,13 @@ const replaceOpts = ({ name, description, author }) => [
   { files: author ? `${name}/LICENSE` : '', from: [AUTHOR], to: [author] }
 ];
 
-const customizeStarter = data =>
-  Promise.reduce(replaceOpts(data), replaceGeneral, [])
-    .then(replacePackage(data))
-    .then(replaceEnv(data));
+const customizeStarter = opts => {
+  console.log('\nCustomizing web-starter repo...\n');
+  return Promise.reduce(replaceOpts(opts), replaceGeneral, [])
+    .then(replacePackage(opts))
+    .then(replaceEnv(opts))
+    .then(() => opts);
+};
 
 const toIntegrations = ({ names }) =>
   names.map(name => ({ [name]: INTEGRATIONS[name] }));
@@ -83,43 +89,67 @@ const promptIntegrations = () =>
   inquirer
     .prompt(INT_OPTIONS)
     .then(toIntegrations)
-    .then(mergeList);
-
-const promptAuthentication = integrations =>
-  Promise.mapSeries(Object.values(integrations), i => i.auth())
     .then(mergeList)
-    .then(merge(integrations));
+    .then(integrations => merge({})({ integrations }));
 
-const loginIntegrations = integrations =>
-  Promise.map(Object.values(integrations), i => i.login(i)).then(
-    () => integrations
+const promptAuthentication = opts =>
+  Promise.mapSeries(Object.values(opts.integrations), i => i.auth())
+    .then(mergeList)
+    .then(merge(opts.integrations))
+    .then(integrations => merge(opts)({ integrations }));
+
+const mapIntegrations = (opts, f) =>
+  Promise.map(Object.values(opts.integrations), f)
+    .then(() => opts);
+
+const loginIntegrations = opts => {
+  console.log('\nAuthenticating integrations...\n');
+  return mapIntegrations(opts, i => i.login(i));
+};
+
+const promptCustomizions = opts =>
+  inquirer.prompt(CUSTOM_OPTIONS).then(merge(opts));
+
+const downloadStarter = opts => {
+  console.log('\nDownloading web-starter repo...\n');
+  return new Promise((res, rej) =>
+    download(REPO, opts.name,
+      e => (e ? rej(e) : res(opts)))
   );
+};
 
-// const validateName = integrations => name =>
-//   name
-//     ? Promise.map(Object.values(integrations), i => i.create(i, name)).then(
-//         () => true
-//       )
-//     : 'Please provide a name for your app.';
-
-const promptCustomizions = integrations =>
-  inquirer.prompt(CUSTOM_OPTIONS).then(merge(integrations));
-
-const downloadStarter = data =>
-  new Promise((res, rej) =>
-    download(REPO, data.name, e => (e ? rej(e) : res(data)))
-  );
-
-const initGit = integrations =>
-  Repository.init(integrations.name, 0)
+const initGit = opts =>
+  Repository.init(opts.name, 0)
     // TODO .then(repo => repo.createCommitOnHead(['.'],
-    //            integrations.author, 'hew', 'Initial commit'))
-    .then(() => integrations);
+    //            opts.author, 'hew', 'Initial commit'))
+    .then(() => opts);
 
-const createIntegrations = integrations => {};
+const exec = (a, b) => {
+  const p = execa(a, b);
+  p.stdout.pipe(process.stdout);
+  p.stderr.pipe(process.stderr);
+  return p;
+};
 
-const removeIntegrations = e => {
-  Object.values(INTEGRATIONS).forEach(i => i.remove());
+const installDeps = opts => {
+  console.log('\nInstalling dependencies...\n');
+  process.chdir(`./${opts.name}`);
+  return exec('yarn').then(() => opts);
+};
+
+const createIntegrations = opts => {
+  console.log('\nIntegrations doing them thang...\n');
+  return mapIntegrations(opts, i => i.create(i, opts.name));
+};
+
+// start app in background
+const startApp = opts => {
+  console.log(`\nStarting ${opts.name}...\n`);
+  return exec('yarn', ['dev']).then(() => opts);
+};
+
+const removeIntegrations = e => { // TODO fix, need opts
+  Object.values(INTEGRATIONS).forEach(i => i.remove(i, null));
   throw e;
 };
 
@@ -136,8 +166,10 @@ const main = () =>
     .then(downloadStarter)
     .then(initGit)
     .then(customizeStarter)
+    .then(installDeps)
     .then(createIntegrations)
+    .then(startApp)
     .catch(removeIntegrations)
     .catch(handleError);
 
-exports = module.exports = () => main();
+exports = module.exports = main;
