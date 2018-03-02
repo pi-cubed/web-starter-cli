@@ -27,16 +27,12 @@ const DESCRIPTION = 'Starter kit for making web apps using JS';
 const AUTHOR = 'Dylan Richardson';
 const REPO = 'drich14/web-starter';
 
-const CUSTOMIZE = [
+const customOptions = validate => [
   {
     type: 'input',
     name: 'name',
     message: "What's the name of your app?",
-    validate: name => {
-      if (!name) return 'Please provide a name for your app.';
-      // TODO create integration apps
-      return true;
-    }
+    validate
   },
   {
     type: 'input',
@@ -50,10 +46,7 @@ const CUSTOMIZE = [
   }
 ];
 
-const replaceGeneral = (_, opts) => {
-  console.log(opts);
-  return replaceInFile(opts);
-};
+const replaceGeneral = (_, opts) => replaceInFile(opts);
 
 const replacePackage = ({ name, description, author }) => () => {
   const packageFile = `${name}/package.json`;
@@ -99,12 +92,21 @@ const promptAuthentication = integrations =>
     .then(merge(integrations));
 
 const loginIntegrations = integrations =>
-  Promise.map(Object.values(integrations), i => i.login()).then(
+  Promise.map(Object.values(integrations), i => i.login(i)).then(
     () => integrations
   );
 
+const validateName = integrations => name =>
+  name
+    ? Promise.map(Object.values(integrations), i => i.create(i, name)).then(
+        () => true
+      )
+    : 'Please provide a name for your app.';
+
 const promptCustomizions = integrations =>
-  inquirer.prompt(CUSTOMIZE).then(merge(integrations));
+  inquirer
+    .prompt(customOptions(validateName(integrations)))
+    .then(merge(integrations));
 
 const downloadStarter = data =>
   new Promise((res, rej) =>
@@ -112,7 +114,6 @@ const downloadStarter = data =>
   );
 
 const removeIntegrations = e => {
-  // undo integrations
   Object.values(INTEGRATIONS).forEach(i => i.remove());
   throw e;
 };

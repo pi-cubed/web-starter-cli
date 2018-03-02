@@ -3,23 +3,16 @@ const { integration } = require('./integration');
 
 const name = 'Heroku';
 
-const login = (app, creds) => {
+const login = creds => {
   // TODO
-  console.log(app, creds);
 };
 
-const create = (app, creds) => {
+const create = (creds, app) => {
   // TODO
-  console.log(app, creds);
-  // const client = new Heroku({ token: process.env[creds[NAME][TOKEN]] });
-  // return client.post('/apps', { body: { name } }).catch(e => {
-  //   throw `Heroku error: ${e.body.message}`;
-  // });
 };
 
-const remove = (app, creds) => {
+const remove = (creds, app) => {
   // TODO
-  console.log(app, creds);
 };
 
 exports = module.exports = integration({ name, login, create, remove });

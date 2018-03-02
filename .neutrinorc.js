@@ -12,7 +12,8 @@ module.exports = {
             'no-console': 'off',
             'arrow-body-style': 'off',
             'no-throw-literal': 'off',
-            'object-curly-newline': 'off'
+            'object-curly-newline': 'off',
+            'no-unused-vars': 'off'
           }
         }
       }
