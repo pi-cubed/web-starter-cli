@@ -1,17 +1,17 @@
-const { integration } = require('./integration');
+const { integration } = require('../integration');
 // const Heroku = require('heroku-client');
 
 const name = 'Heroku';
 
-const login = creds => {
+const login = opts => {
   // TODO
 };
 
-const create = (creds, app) => {
+const create = opts => {
   // TODO
 };
 
-const remove = (creds, app) => {
+const remove = opts => {
   // TODO
 };
 

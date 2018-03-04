@@ -1,11 +1,7 @@
 const inquirer = require('inquirer');
 const _ = require('lodash');
 const Promise = require('bluebird');
-const deepMerge = require('deepmerge');
-
-export const merge = o1 => o2 => {
-  return deepMerge(o1, o2);
-};
+const { merge, mergeList, envify } = require('./utility');
 
 const makePrompt = name => cred =>
   inquirer
@@ -45,9 +41,6 @@ const promptCredType = (name, creds) => {
     .then(({ choice }) => choices.indexOf(choice));
 };
 
-// can't refactor to just Object.assign ?
-export const mergeList = l => l.reduce(deepMerge, {});
-
 const makeCredentials = (name, credList) => vals => {
   const creds = mergeList(credList);
   return {
@@ -83,8 +76,6 @@ const makeAuthPrompt = (name, creds) => async () => {
   return promptCreds(creds[credIndex]);
 };
 
-const envify = name => name.toUpperCase().replace(' ', '_');
-
 const makeToken = name => ({
   token: {
     env: `${envify(name)}_API_TOKEN`,
@@ -101,7 +92,7 @@ const makeUsernamePassword = name => ({
   }
 });
 
-export const integration = ({
+const integration = ({
   name,
   login,
   create,
@@ -123,4 +114,8 @@ export const integration = ({
       remove
     }
   };
+};
+
+exports = module.exports = {
+  integration
 };
