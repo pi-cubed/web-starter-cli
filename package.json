@@ -13,7 +13,9 @@
     "test": "neutrino test",
     "start": "bin/index.js",
     "dev": "yarn build && yarn start",
-    "prepublish": "not-in-install && yarn build || true"
+    "prepublish": "not-in-install && yarn build || true",
+    "snyk-protect": "snyk protect",
+    "prepare": "npm run snyk-protect"
   },
   "devDependencies": {
     "@neutrinojs/airbnb-base": "^8.1.1",
@@ -36,6 +38,8 @@
     "nodegit": "^0.21.0",
     "replace-in-file": "^3.1.1",
     "source-map-support": "^0.5.3",
-    "yargs": "^11.0.0"
-  }
+    "yargs": "^11.0.0",
+    "snyk": "^1.83.0"
+  },
+  "snyk": true
 }
