@@ -33,7 +33,7 @@
     "in-publish": "^2.0.0",
     "inquirer": "^5.1.0",
     "lodash": "^4.17.5",
-    "nodegit": "^0.21.0",
+    "nodegit": "^0.23.0",
     "replace-in-file": "^3.1.1",
     "source-map-support": "^0.5.3",
     "yargs": "^11.0.0"
